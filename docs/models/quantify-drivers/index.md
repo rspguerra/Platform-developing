@@ -6,7 +6,7 @@ sidebar_label: Overview
 
 **Authors:** [Arnau Garcia Mesa](https://orcid.org/0009-0004-5738-8867), [Lluís Palma](https://orcid.org/0000-0002-3284-2152), [Markus Donat](https://orcid.org/0000-0002-0608-7288), [Stefano Materia](https://orcid.org/0000-0001-5635-2847), [Raül Marcos Matamoros](https://orcid.org/0000-0002-3610-3445).
 
-**Links:** [Original Paper](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-5392/) | [Code Repository](https://github.com/agarcimes8/QuantifyDriversHW) | [Data repository](https://zenodo.org/uploads/18402053)  
+**Links:** [Original Paper](https://egusphere.copernicus.org/preprints/2025/egusphere-2025-5392/) | [Code Repository](https://zenodo.org/records/22143255) | [Data repository](https://zenodo.org/records/21337082)  
 
 ---
 
