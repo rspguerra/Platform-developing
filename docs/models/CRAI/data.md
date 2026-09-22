@@ -118,8 +118,50 @@ conda activate esmvaltool
 esmvaltool run CRAI_recipe.yml
 ```
  
-The output zarr store will be written to the `work_dir` subdirectory inside `output_dir`. Update `paths.yml` in the SEASGen experiment configs to point to this path before running the model.
+The output NetCDF store will be written to the `work_dir` subdirectory inside `output_dir`. Update `paths.yml` in the SEASGen experiment configs to point to this path before running the model.
  
+---
+ 
+## 5. Preprocessing data into the indices
+
+Once each model data is downloaded it must be organized as it follows:
+
+```bash
+raw_downloads/
+`-- CMIP6
+    `-- CMIP
+        |-- AWI
+        |   `-- AWI-CM-1-1-MR
+        |-- CNRM-CERFACS
+        |   `-- CNRM-CM6-1-HR
+        |-- EC-Earth-Consortium
+        |   |-- EC-Earth3
+        |   |-- EC-Earth3-AerChem
+        |   |-- EC-Earth3-CC
+        |   `-- EC-Earth3-Veg
+        |-- MOHC
+        |   `-- HadGEM3-GC31-MM
+        `-- MPI-M
+            `-- MPI-ESM1-2-HR
+```
+Inside of each model the structure must be as:
+
+```bash
+ `-- historical
+     `-- r10i1p1f1 (member code)
+         `-- day (frequence)
+             `-- tasmax (variable)
+                 `-- ["gr" or "gn"] (grid)
+                     `-- "v..." 
+```
+
+With each model folder corretly in place and filled with the downloaded netCDF (.nc) data containing daily tasmax and tasmin for each one of the years from 1940 to 2022, run the code python + cdo pipeline for preprocessing and index calculation code `build_all_cmip_indices.sh`. 
+
+> **Note 1**: If you are in a HPC, run the preprocessing code through a slurm script.
+
+>**Note 2:** If the `build_all_cmip_indices.sh` gets interrupted during its execution, verify in which model member it happened and delete the incomplete file. The code has a file verification that identifies already created output files before runing the pipeline only for the missing ones, if a file creation is interrupted this incomplete file will be counted as an existing one and will break the training pipeline execution afterwards.
+
+The preprocessing pipeline will produce 4 netCDF file (.nc) for each model member one per index (TN10p, TN90p, TX10p and TX90p), following the naming pattern `{index}_{model}_{member}_{starting_year}-{ending_year}.nc`. Those files are the ones used in the training and validation pipeline of the model.
 
 
 

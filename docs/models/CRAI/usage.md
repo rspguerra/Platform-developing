@@ -16,51 +16,150 @@ conda env create -f environment.yml
 Or, if you are training on GPUs:
 ```bash
 conda env create -f environment-cuda.yml
-conda activate crai
-pip install .
+
 ```
 
 A singularity image is also provided for avoiding dependency issues with specific clusters. To mount it and execute it, run the following commands:
 
 ```bash
-singularity build /home/singularity/crai_image.sif /home/singularity/crai_image.def
+singularity build /home/singularity/crai_image.sif /home/singularity/<CONTAINER_NAME>.def
 ```
 >**Note**. In most HPC clusters, for security reasons it is not possible to mount the image directly there. In this case, it is recommended to mount it locally, and then transfer it to where the code will be ran.
+
+The Climate Reconstruction AI model is presented as a package, so it must also be installed with pip in order to work as intended by the authors.
+
+```bash
+conda activate <ENVIRONMENT_NAME>
+pip install .
+```
 
 ----
 
 ## 2. Data preparation
 
-CRAI expects your NetCDF (`.nc`) climate datasets to be organized into specific sub-directories based on which phase you are running:
+CRAI expects your NetCDF (`.nc`) climate datasets to be referenced as a list in a json files stored in specific sub-directories based on which phase you are running:
 
-- `data/` and `val/` — used during **training**.
-- `test/` — used during **evaluation**.
+- `${ROOT}/data/train/training_data.json` and `${ROOT}/data/val/val_data.json` — used during **training**.
+- `${ROOT}/data/test/test_data.json` — used during **evaluation**.
 
 **Masks:** missing values are defined by mask files (`1` for valid data, `0` for missing data). These must match the dimensions of your climate datasets. If you don't provide explicit mask files, CRAI can automatically extract them from the NaN values in your climate dataset.
+
+The data split is made in the moment that the json lists are created based on the total number of models and consequently the total number of monthly samples, as stated in the paper *37 models data for training (50616 monthly samples), 7 (9576 monthly samples) models for validation and 1 (1368 monthly samples)* for testing, giving us the total of *45 models and 61560 monthly samples*.
+
+> **Note:** In the reproduction made the random sampling was made memberwise filing the each one of the training, validation and testing lists with the files path. 
 
 ---
 
 ## 3. Running the software
 
-You can trigger CRAI from the terminal or from within a Python script.
+In order to run the package you must execute its built-in commands crai-train, and crai-evaluate followed by the required arguments for each command, which are listed and described in the README.md found in the CRAI repository. 
 
-**Training:**
+### 3.1 Training:
+
+To execute the training type the following command:
+
 ```bash
-crai-train [options]
+crai-train -f arguments/arguments.txt
 
 # or, if the singularity image was used:
-singularity exec --nv crai_hybrid.sif crai-train
+singularity exec --nv <CONTAINER_NAME>.sif crai-train -f arguments/arguments.txt
 ```
 ```python
 from climatereconstructionai import train
 train()
 ```
+The model must be separetely trained for each index (TN10p, TN90p, TX10p and TX90p) so the arguments.txt file must be adapted to each index. To achieve the same training setup as the papper *for the TN10p index*, type the following arguments inside the arguments.txt file:
 
-**Evaluation (infilling):**
 ```bash
-crai-evaluate [options]
+--data-root-dir
+/path/to/project/root/data/
+--data-names
+train_TN10p.json
+--val-names
+val_TN10p.json
+--data-types
+TN10p
+--log-dir
+/path/to/project/root/logs/TN10p/
+--snapshot-dir
+/path/to/project/root/snapshots/TN10p_1/
+--batch-size
+16
+--n-threads
+32
+--max-iter
+1000000
+--log-interval
+100
+--save-model-interval
+100000
+--lr
+5e-5
+--mask-dir
+/path/to/datasets/folder/masks/
+--mask-names
+mask_TN10p.nc
+--shuffle-masks
+--conv-factor
+128
+--loss-criterion
+1
+--min-bounds
+0
+--max-bounds
+100
+--encoding-layers
+3
+--pooling-layers
+0
+--normalize-data
+--loop-random-seed
+2000
+--cuda-random-seed
+1000
+```
+>**Note:** This is an example with the required arguments and values, remember to update to your folder paths and particularities.
+
+The paper states that the results obtained were the averaged result of 20 different model trainings, which means that the training pipeline must be ran 20 times and generate 20 *"best checkpoints"*. To run an array of jobs with different and randomized `--loop-random-seed` and `--cuda-random-seed` and save the outputs in different folders for the index TN10p for example, the following script can be used:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=crai_train_TN10p
+#SBATCH --output=logs/slurm/process_%A_%a.out
+#SBATCH --error=logs/slurm/process_%A_%a.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32      # Fixes the DataLoader warning
+#SBATCH --time=24:00:00
+#SBATCH --account=
+#SBATCH --partition=            # Puts you in the GPU nodes
+#SBATCH --qos=
+#SBATCH --gres=gpu:1
+#SBATCH --array=1-20%10
+
+BASE=/path/to/project/root/
+ARGS=$BASE/arguments/train_args_TN10p.txt
+SIF=/path/to/project/root/<CONTAINER_NAME>.sif
+IDX=TN10p
+
+i=$SLURM_ARRAY_TASK_ID
+n=$(printf '%02d' "$i")
+
+singularity exec --nv "$SIF" crai-train  -f "$ARGS" \
+	 --loop-random-seed $((1000 + i)) \
+	 --cuda-random-seed $((2000 + i)) \
+	 --snapshot-dir "$BASE/snapshots/$IDX/run_$n/" \
+	 --log-dir "$BASE/logs/$IDX/run_$n/"
+
+```
+>**Note:** Adjust the code to your folder paths and particularities.
+
+
+### 3.2 Evaluation (infilling):
+```bash
+crai-evaluate -f arguments/arguments.txt
 # or, if the singularity image was used:
-singularity exec --nv crai_hybrid.sif crai-evaluate
+singularity exec --nv <CONTAINER_NAME>.sif crai-evaluate -f arguments/arguments_TN10p.txt
 ```
 ```python
 from climatereconstructionai import evaluate
