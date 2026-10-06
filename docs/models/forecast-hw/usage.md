@@ -2,7 +2,11 @@
 title: How to use
 ---
 
+
 ## 1. Installation
+
+Considering that the main goal of this guide is to make the pipeline easily and fully reproducible, it will focus on container execution, once it is achievable both in HPC and local execution scenarios.
+
 ### Setup Repository
 The project repository is available in github at this link. To get started, clone the project and navigate to the directory:
 ```
@@ -62,7 +66,7 @@ source .venv/bin/activate
 
 ### 1.3 Singularity Container setup
 
-Container build with singularity, from a *.def* file available within the repository files. For the container the environment was installed using miniconda3: 24.1.2-0.
+Container build with singularity, from a *.def* file available within the repository files. For the container scenario, the environment was installed using miniconda3: 24.1.2-0.
 
 
 ```bash
@@ -132,54 +136,13 @@ singularity exec --nv -B featsel_image.sif python3 -u testsFS_wfwd_FIXED_FEATURE
 
 ---
 
-## 2. Feature Selection, Prediction & SHAP computing
 
-The workflow for this project follows a pipeline designed to replicate the data-driven methodology from the associated paper. The process is divided into three distinct stages:
-
-- **Data Loading:** Retrieves the combined climate dataset (containing both predictors and the target variable) for a specific season and region via the ClimateDataset class.
-
-- **Feature Selection (GHGA):** Uses a Guided Hybrid Genetic Algorithm (GHGA) wrapped around a Random Forest (RF) base learner. It minimizes a cost function to select an ensemble of the best feature subsets (predictors).
-
-- **SHAP Computing & Evaluation:** Uses tree-based SHAP explainers to compute feature importance scores across the ensemble of "good" models, outputting predictions, R-squared (R2) scores, and aggregated SHAP values to CSV files.
-
-Full Pipeline Script (testsFS_2022_refactored.py)
-
-This main script executes the entire lifecycle end-to-end. It utilizes Hydra, meaning you can modify its behavior via the command line without changing the source code.
-
-Example SLURM Script for Parallelization:
-```
-#!/bin/bash
-#SBATCH --job-name featsel
-#SBATCH --time=01:00:00
-#SBATCH --array=0-39
-
-SEASONS=('is_MAM' 'is_JJA' 'is_SON' 'is_DJF')
-REGIONS=('is_ceur' 'is_cmed' 'is_eeur' 'is_emea' 'is_emed' 'is_scan' 'is_ukbn' 'is_wceu' 'is_wmed' 'is_wsib')
-
-SEASON_IDX=$((SLURM_ARRAY_TASK_ID / 10))
-
-REGION_IDX=$((SLURM_ARRAY_TASK_ID % 10))
-
-CURRENT_SEASON=${SEASONS[$SEASON_IDX]}
-CURRENT_REGION=${REGIONS[$REGION_IDX]}
-
-echo "Running task $SLURM_ARRAY_TASK_ID with season=$CURRENT_SEASON and region=$CURRENT_REGION"
-
-SCRIPT_PATH="/path/to/main_script.py"
-
-export UV_LINK_MODE=copy
-
-uv run --no-sync python3 -u /gpfs/scratch/bsc32/bsc214253/featsel/main/testsFS_2022_refactored.py season=$CURRENT_SEASON region=$CURRENT_REGION
-```
-Note: This will run using the default inputs defined in conf/config.yaml. Specific file paths must be configured for your environment (see below).
-
----
-
-## 3. Configuration
+## 2. Configuration
 This project uses Hydra for configuration management. This strictly separates the code logic from experimental settings. You should not edit the Python code to change target regions; instead, use the configuration files or CLI overrides.
 
 The main configuration entry point is conf/config.yaml.
-### Configuration Parameters
+
+### 2.1 Configuration Parameters
 
 |Parameter |Description |	Example|
 | :--- | :--- | :--- |
@@ -204,6 +167,53 @@ Run with a custom input path and output directory:
 ```
 uv run python testsFS_2022_refactored.py input_path="/new/path/data.csv" output_dir="./new_results"
 ```
+
+---
+
+## 3. Feature Selection, Prediction & SHAP computing
+
+The workflow for this project follows a pipeline designed to replicate the data-driven methodology from the associated paper. The process is divided into three distinct stages:
+
+- **Data Loading:** Retrieves the combined climate dataset (containing both predictors and the target variable) for a specific season and region via the ClimateDataset class.
+
+- **Feature Selection (GHGA):** Uses a Guided Hybrid Genetic Algorithm (GHGA) wrapped around a Random Forest (RF) base learner. It minimizes a cost function to select an ensemble of the best feature subsets (predictors).
+
+- **SHAP Computing & Evaluation:** Uses tree-based SHAP explainers to compute feature importance scores across the ensemble of "good" models, outputting predictions, R-squared (R2) scores, and aggregated SHAP values to CSV files.
+
+Full Pipeline Script (testsFS_2022_refactored.py)
+
+This main script executes the entire lifecycle end-to-end, over the preprocessed input data. It utilizes Hydra, meaning you can modify its behavior via the command line without changing the source code.
+
+Example SLURM Script for parallelization:
+```bash
+#!/bin/bash
+#SBATCH --job-name featsel
+#SBATCH --time=01:00:00
+#SBATCH --array=0-39
+
+SEASONS=('is_MAM' 'is_JJA' 'is_SON' 'is_DJF')
+REGIONS=('is_ceur' 'is_cmed' 'is_eeur' 'is_emea' 'is_emed' 'is_scan' 'is_ukbn' 'is_wceu' 'is_wmed' 'is_wsib')
+
+SEASON_IDX=$((SLURM_ARRAY_TASK_ID / 10))
+
+REGION_IDX=$((SLURM_ARRAY_TASK_ID % 10))
+
+CURRENT_SEASON=${SEASONS[$SEASON_IDX]}
+CURRENT_REGION=${REGIONS[$REGION_IDX]}
+
+echo "Running task $SLURM_ARRAY_TASK_ID with season=$CURRENT_SEASON and region=$CURRENT_REGION"
+
+SCRIPT_PATH="<PROJECT_ROOT_DIRECTORY>/main_script.py"
+
+export UV_LINK_MODE=copy
+
+uv run --no-sync python3 -u <PROJECT_ROOT_DIRECTORY>/testsFS_2022_refactored.py season=$CURRENT_SEASON region=$CURRENT_REGION
+
+# Or through the container
+singularity exec --nv -B <PROJECT_ROOT_DIRECTORY>/featsel_image.sif python3 -u <PROJECT_ROOT_DIRECTORY>/testsFS_2022_refactored.py season=$CURRENT_SEASON region=$CURRENT_REGION
+
+```
+>Note: This will run using the default inputs defined in conf/config.yaml. Specific file paths must be configured for your environment (see below).
 
 ---
 

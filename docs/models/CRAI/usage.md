@@ -37,20 +37,34 @@ pip install .
 
 ## 2. Data preparation
 
+### 2.1 Input data
+
+#### 2.1.1 NetCDF files
+
 CRAI expects your NetCDF (`.nc`) climate datasets to be referenced as a list in a json files stored in specific sub-directories based on which phase you are running:
 
 - `${ROOT}/data/train/training_data.json` and `${ROOT}/data/val/val_data.json` — used during **training**.
 - `${ROOT}/data/test/test_data.json` — used during **evaluation**.
 
-**Masks:** missing values are defined by mask files (`1` for valid data, `0` for missing data). These must match the dimensions of your climate datasets. If you don't provide explicit mask files, CRAI can automatically extract them from the NaN values in your climate dataset.
+**Version 1.0.4:** The data split is made in the moment that the json lists are created based on the total number of models and consequently the total number of monthly samples, as stated in the paper *37 models data for training (50616 monthly samples), 7 (9576 monthly samples) models for validation and 1 (1368 monthly samples)* for testing, giving us the total of *45 models and 61560 monthly samples*.
 
-The data split is made in the moment that the json lists are created based on the total number of models and consequently the total number of monthly samples, as stated in the paper *37 models data for training (50616 monthly samples), 7 (9576 monthly samples) models for validation and 1 (1368 monthly samples)* for testing, giving us the total of *45 models and 61560 monthly samples*.
+**Version 1.0.3:** For this verison there must be only one file to be refferenced for each training, validation and testing step. So a CDO pipeline must be executed to merge the `.nc` files and generate one unique file for each one of the steps.
 
 > **Note:** In the reproduction made the random sampling was made memberwise filing the each one of the training, validation and testing lists with the files path. 
 
+> **Note 2:** The paper results were obtained using the version 1.0.3 of the CRAI package, which now is at version 1.0.4, so it is important to mind some setup differences between versions and possible output values discrepancies.
+
+#### 2.1.2 Mask files
+
+**Mask files:** They are refference `.nc` files that provide missing data structure (`1` for valid data, `0` for missing data) to simulate the HadEX original file into the training and evaluation pipelines. These must match the dimensions of your climate datasets. If you don't provide explicit mask files, CRAI can automatically extract them from the NaN values in your climate dataset.
+
+The mask files can be stored in a mask directory inside the project root - as the example bellow - to be refferenced in the execution arguments as `--mask-dir` and `--maks-names`.
+
+- `${ROOT}/data/mask/`
+
 ---
 
-## 3. Running the software
+## 3. Running the model
 
 In order to run the package you must execute its built-in commands crai-train, and crai-evaluate followed by the required arguments for each command, which are listed and described in the README.md found in the CRAI repository. 
 
@@ -59,10 +73,10 @@ In order to run the package you must execute its built-in commands crai-train, a
 To execute the training type the following command:
 
 ```bash
-crai-train -f arguments/arguments.txt
+crai-train -f arguments/training_arguments_TN10p.txt
 
-# or, if the singularity image was used:
-singularity exec --nv <CONTAINER_NAME>.sif crai-train -f arguments/arguments.txt
+# or, with the singularity image:
+singularity exec --nv <CONTAINER_NAME>.sif crai-train -f <PROJECT_ROOT_PATH>/arguments/training_arguments_TN10p.txt
 ```
 ```python
 from climatereconstructionai import train
@@ -72,7 +86,7 @@ The model must be separetely trained for each index (TN10p, TN90p, TX10p and TX9
 
 ```bash
 --data-root-dir
-/path/to/project/root/data/
+<PROJECT_ROOT_PATH>/data/
 --data-names
 train_TN10p.json
 --val-names
@@ -80,9 +94,9 @@ val_TN10p.json
 --data-types
 TN10p
 --log-dir
-/path/to/project/root/logs/TN10p/
+<PROJECT_ROOT_PATH>/logs/TN10p/
 --snapshot-dir
-/path/to/project/root/snapshots/TN10p_1/
+<PROJECT_ROOT_PATH>/snapshots/TN10p/
 --batch-size
 16
 --n-threads
@@ -96,7 +110,7 @@ TN10p
 --lr
 5e-5
 --mask-dir
-/path/to/datasets/folder/masks/
+<INPUT_DATA_PATH>/masks/
 --mask-names
 mask_TN10p.nc
 --shuffle-masks
@@ -117,10 +131,12 @@ mask_TN10p.nc
 2000
 --cuda-random-seed
 1000
+--steady-masks
+steady_sea_TN10p.nc
 ```
->**Note:** This is an example with the required arguments and values, remember to update to your folder paths and particularities.
+>**Note:** This is an example with the required arguments and values for TN10p, remember to update to your folder paths and particularities and data.
 
-The paper states that the results obtained were the averaged result of 20 different model trainings, which means that the training pipeline must be ran 20 times and generate 20 *"best checkpoints"*. To run an array of jobs with different and randomized `--loop-random-seed` and `--cuda-random-seed` and save the outputs in different folders for the index TN10p for example, the following script can be used:
+The paper states that the results obtained were the averaged result of 20 different model trainings, which means that the training pipeline must be ran 20 times and generate 20 *"final checkpoints"*. To run an array of jobs with different and randomized `--loop-random-seed` and `--cuda-random-seed` and save the outputs in different folders for the index TN10p for example, the following script can be used:
 
 ```bash
 #!/bin/bash
@@ -137,9 +153,9 @@ The paper states that the results obtained were the averaged result of 20 differ
 #SBATCH --gres=gpu:1
 #SBATCH --array=1-20%10
 
-BASE=/path/to/project/root/
+BASE=<PROJECT_ROOT_PATH>
 ARGS=$BASE/arguments/train_args_TN10p.txt
-SIF=/path/to/project/root/<CONTAINER_NAME>.sif
+SIF=$BASE/<CONTAINER_NAME>.sif
 IDX=TN10p
 
 i=$SLURM_ARRAY_TASK_ID
@@ -154,31 +170,103 @@ singularity exec --nv "$SIF" crai-train  -f "$ARGS" \
 ```
 >**Note:** Adjust the code to your folder paths and particularities.
 
+Once the array job is executed and each training array output the final checkpoint you can move to the evaluation pipeline
+
 
 ### 3.2 Evaluation (infilling):
+
+The evaluation pipeline will use each checkpoint stored in the outputs folder `--model-dir` inputed as `--model-name` in the arguments as an ensamble, generating an evaluation metric to each one of the arrays. You can follow the example bellow for a evaluation argument text file. 
+
+The flag `--plot-results` determines which timesteps are going to be ploted demonstrating the infilling results, feel free to change it as you prefer, minding that 0 is the first hour of the first year of simulation and the last one is the last hour of the last day of the simulation period, and will vary depending on the number of timesteps your simulation has, which can be vefified with the CDO command `cdo sinfon <file_name>.nc`
+
 ```bash
-crai-evaluate -f arguments/arguments.txt
-# or, if the singularity image was used:
-singularity exec --nv <CONTAINER_NAME>.sif crai-evaluate -f arguments/arguments_TN10p.txt
+--data-root-dir
+<PROJECT_ROOT_PATH>/data/
+--data-names
+test_TN10p.json
+--data-types
+TN10p
+--model-dir
+<PROJECT_ROOT_PATH>/snapshots/TN10p
+--model-names
+run_01/ckpt/final.pth,run_02/ckpt/final.pth,run_03/ckpt/final.pth,run_04/ckpt/final.pth,run_05/ckpt/final.pth,run_06/ckpt/final.pth,run_07/ckpt/final.pth,run_08/ckpt/final.pth,run_09/ckpt/final.pth,run_10/ckpt/final.pth,run_11/ckpt/final.pth,run_12/ckpt/final.pth,run_13/ckpt/final.pth,run_14/ckpt/final.pth,run_15/ckpt/final.pth,run_16/ckpt/final.pth,run_17/ckpt/final.pth,run_18/ckpt/final.pth,run_19/ckpt/final.pth,run_20/ckpt/final.pth
+--evaluation-dirs
+outputs/TN10p/array/
+--eval-names
+TN10p_20_eval
+--device
+cuda
+--log-dir
+<PROJECT_ROOT_PATH>/logs/TN10p/eval/
+--use-train-stats
+--batch-size
+16
+--n-threads
+32
+--plot-results 0,200,400,600,800,1000,1200
+--mask-dir
+<INPUT_DATA_PATH>/masks/
+--mask-names
+croped_mask_TN10p.nc
+--conv-factor
+128
+--encoding-layers
+3
+--pooling-layers
+0
+--normalize-data
+--min-bounds
+0
+--max-bounds
+100
+--steady-masks
+steady_sea_TN10p.nc
 ```
+
+Once the arguments as set the evaluation pipeline can be executed through the command:
+
+```bash
+crai-evaluate -f <PROJECT_ROOT_PATH>/arguments/evaluation_arguments_TN10p.txt
+
+# or, with the singularity image:
+singularity exec --nv <CONTAINER_NAME>.sif crai-evaluate -f <PROJECT_ROOT_PATH>/arguments/evaluation_arguments_TN10p.txt
+```
+
+
 ```python
 from climatereconstructionai import evaluate
 evaluate()
 ```
 
-Because CRAI has many configuration options, typing them all in the terminal can be tedious. You can save all your parameters in a plain text file and load them at runtime using the `-f` / `--load-from-file` flag:
-
-```bash
-crai-train -f my_config.txt
-```
+>**Note:** The evaluation arguments differ from the training arguments in some aspects, so it is a good practice to have one file per each pipeline. For more possible configuration flags check the *Configuration guide* section.
 
 ---
 
-## 4. Configuration guide
+## 4. Evaluation outputs
+
+Once the evaluation is complete, CRAI will generate 5 NetCDF (`.nc`) files and the requested amount of PNG image inside the `outputs/` folder. The output files and its content description are listed bellow:
+
+The evaluation process produces an infilled climate dataset. More concretely, each evaluation process produces the `outputs` folder, which has the following content:
+1. `<output_name>_gt.nc`: NetCDF corresponding to the original dataset (gt = grand throuth).
+2. `<output_name>_mask.nc`: mask corresponding to the missing values.
+3. `<output_name>_image.nc`: original dataset with the mask of missing values applied.
+4. `<output_name>_output.nc`: dataset where valid and missing values are being infilled.
+5. `<output_name>_infilled.nc`: original dataset with the missing values replaced by the values from `<output_name>_output.nc`.
+6. `<output_name>_infilled.png`: plot of the first timestep of `<output_name>_infilled.nc`.
+
+### 4.1 Statistical calculations
+
+
+### 4.2 Ploting results
+
+
+
+--- 
+## 5. Configuration guide
 
 The CLI arguments are broken down into logical categories below.
 
-### File paths
+### 5.1 File paths
 
 | Flag | Description |
 |---|---|
@@ -188,7 +276,7 @@ The CLI arguments are broken down into logical categories below.
 | `--log-dir` / `--snapshot-dir` | Where TensorBoard logs and intermediate snapshot images are saved during training. |
 | `--evaluation-dirs` | *(Evaluation only)* Where the final infilled NetCDF files will be saved. |
 
-### Hardware and performance
+### 5.2 Hardware and performance
 
 | Flag | Description |
 |---|---|
@@ -198,7 +286,7 @@ The CLI arguments are broken down into logical categories below.
 | `--n-threads` | Number of CPU workers for loading data. |
 | `--lazy-load` | Crucial for massive datasets; loads data into memory only when needed rather than all at once. |
 
-### Model architecture
+### 5.3 Model architecture
 
 | Flag | Description |
 |---|---|
@@ -207,7 +295,7 @@ The CLI arguments are broken down into logical categories below.
 | `--attention` | Enables the attention module, helping the model focus on specific spatial features. |
 | `--disable-skip-layers` | Removes skip connections in the U-Net (usually not recommended, but available for testing). |
 
-### Training hyperparameters
+### 5.4 Training hyperparameters
 
 | Flag | Description |
 |---|---|
@@ -217,7 +305,7 @@ The CLI arguments are broken down into logical categories below.
 | `--early-stopping-patience` | Stops training automatically if the validation loss hasn't improved after this many checks, preventing overfitting. |
 | `--normalize-data` | Normalizes your input climate data to a mean of 0 and standard deviation of 1 before passing it to the network. |
 
-### Evaluation and output
+### 5.5 Evaluation and output
 
 | Flag | Description |
 |---|---|
@@ -229,7 +317,7 @@ The CLI arguments are broken down into logical categories below.
 
 ---
 
-## 5. Infilling process
+## 6. Infilling process
 
 CRAI includes a pre-configured demo to help you understand the evaluation (infilling) process. This example infills missing monthly global temperature anomalies from the HadCRUT4 dataset for two specific historical dates: **September 1877** and **August 1893**.
 
@@ -254,6 +342,3 @@ crai-evaluate --load-from-file demo_args.txt
 
 ---
 
-## 6. Outputs
-
-Once the evaluation is complete, CRAI will generate 5 NetCDF (`.nc`) files and 1 PNG image inside the `outputs/` folder. What each file represents is detailed in the [Overview](index.md).

@@ -22,7 +22,7 @@ To run the notebooks, we provide a container configuration file `.def` to be use
 
 
 
-> **Note:** adjust the paths above (`<PROJECT_ROOT_DIRECTORY>` and `rmm_env2.sif`) to match where you've saved the project and the image on your own machine.
+> **Note:** adjust the paths above (`<PROJECT_ROOT_PATH>` and `rmm_env2.sif`) to match where you've saved the project and the image on your own machine.
 
 > **Note**: move the `.sif` file to your project root directory once the building is done for a simple execution.
 
@@ -37,9 +37,9 @@ Paths and constants used throughout the notebooks are set in a single `config.ya
 ```yaml
 # config.yaml
 paths:
-  project_root: '<PROJECT_ROOT_DIRECTORY>'
-  data_path: '<PROJECT_ROOT_DIRECTORY>/DATA'
-  figs_path: '<PROJECT_ROOT_DIRECTORY>/figures'
+  project_root: '<PROJECT_ROOT_PATH>'
+  data_path: '<PROJECT_ROOT_PATH>/DATA'
+  figs_path: '<PROJECT_ROOT_PATH>/figures'
 
 constants:
   target_variable_name: 'var167'
@@ -62,22 +62,25 @@ constants:
 
 > **Note**: feel free to set the paths as you wish, but we advise to follow the centered on root directory strategy to make the reproduction more intuitive.
 
-## 3. Running the scripts
+## 3. Model training
 
+>**Note:** Pending info from author
 
-### 3.1 Inside Jupyter
+## 4. Running figures creation notebooks
+
+### 4.1 Running inside Jupyter
 
 Run the container, binding your local project folder to your project root directory inside the image:
 
 ```bash
-   singularity run --bind <PROJECT_ROOT_DIRECTORY> rmm_env2.sif
+   singularity run --bind <PROJECT_ROOT_PATH>/rmm_env2.sif
 ```
 
-Once the container starts, open the link it prints in your terminal to access the notebook interface.
+Once the container starts, open the link it prints in your terminal to access the notebook interface. Using this method you'll be able to execute the notebook cell by cell and make changes as you desire.
 
-### 3.2 Bash scripts
+### 4.2 Bash scripts
 
-For a HPC running it is possible to run it through a single batch script all the paper steps. To do so, build a bash script with the following commands, they will execute all the figure notebooks in sequence and generate all the figures and data used in the paper analysis.
+For a HPC running it is possible to run it through a single batch script all the paper steps. To do so, build a bash script with the following commands, they will execute all the figure notebooks in sequence and generate all the figures and data used in the paper analysis. The commands will generate and save the figures in your project directory, and also generates a new jupyter notebook with all cells outputs to so its possible to verify any desired cell output.
 
 ```bash
 

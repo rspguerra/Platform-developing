@@ -155,7 +155,7 @@ Inside of each model the structure must be as:
                      `-- "v..." 
 ```
 
-With each model folder corretly in place and filled with the downloaded netCDF (.nc) data containing daily tasmax and tasmin for each one of the years from 1940 to 2022, run the code python + cdo pipeline for preprocessing and index calculation code `build_all_cmip_indices.sh`. 
+With each model folder correctly in place and filled with the downloaded netCDF (.nc) data containing daily tasmax and tasmin for each one of the years from 1940 to 2022, run the code python + cdo pipeline for preprocessing and index calculation code `build_all_cmip_indices.sh`. 
 
 > **Note 1**: If you are in a HPC, run the preprocessing code through a slurm script.
 
