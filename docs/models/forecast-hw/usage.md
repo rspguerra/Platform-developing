@@ -137,7 +137,7 @@ singularity exec --nv -B featsel_image.sif python3 -u testsFS_wfwd_FIXED_FEATURE
 ---
 
 
-## 2. Configuration
+## 2. Configuration setup
 This project uses Hydra for configuration management. This strictly separates the code logic from experimental settings. You should not edit the Python code to change target regions; instead, use the configuration files or CLI overrides.
 
 The main configuration entry point is conf/config.yaml.
@@ -146,31 +146,80 @@ The main configuration entry point is conf/config.yaml.
 
 |Parameter |Description |	Example|
 | :--- | :--- | :--- |
-|`season`|	The meteorological season to forecast.	|`is_JJA`|
-|`region`	|The European target region to evaluate.	|`is_wmed`|
-|`input_path` |	Absolute path to the input CSV/data file containing predictors and targets.	|`/path/to/data.csv`|
-|`output_dir` |	Directory where the output CSVs (SHAP values, predictions, selected features) will be saved.|`/path/to/results/`|
+|`preprocessing.base_dir`|	Code root directory 	|`path/to/project/root/HGRF-HeatWaves`|
+|`preprocessing.wrkdir`|	Preprocessed data output directory	|`${preprocessing.base_dir}/preprocessed_data/BSC`|
+|`preprocessing.srcdir_month`|	Raw ERA5 data directory	|`path/to/raw/era5/`|
+|`preprocessing.srcdir_era5land`|	Raw ERA5-land data directory	|`path/to/raw/era5land/`|
+|`preprocessing.srcdir_seas5`|	Raw SEAS5-land data directory	|`path/to/raw/seas5/`|
+|`preprocessing.prepdir`|	Preprocessing code for ERA5 and ERA5-Land directory	|`${preprocessing.base_dir}/preprocessing/BSC`|
+|`preprocessing.co2_dir`|	Preprocessing code for CO2 NOAA directory	|``${preprocessing.base_dir}/preprocessing/CO2``|
+|`experiment.season`|	The meteorological season to forecast.	|`is_JJA`|
+|`experiment.region`	|The European target region to evaluate.	|`is_wmed`|
+|`experiment.input_path` |	Absolute path to the input CSV/data file containing predictors and targets.	|`/path/to/data.csv`|
+|`experiment.output_dir` |	Directory where the output CSVs (SHAP values, predictions, selected features) will be saved.|`/path/to/results/`|
 
 
-### How to use (CLI Overrides)
+#### How to use (CLI Overrides)
 
 Hydra allows you to override any config value directly from the command line.
 
 Run for a specific season and region:
 
 ```
-uv run python testsFS_2022_refactored.py season='is_DJF' region='is_scan'
+# With Virtual environment
+uv run python testsFS_wfwd_FIXED_FEATURES_refactored.py season='is_DJF' region='is_scan'
+
+# With Singularity Container
+singularity exec --nv featsel_image.sif python3 -u testsFS_wfwd_FIXED_FEATURES_refactored.py season='is_DJF' region='is_scan'
 ```
 
 Run with a custom input path and output directory:
 
 ```
-uv run python testsFS_2022_refactored.py input_path="/new/path/data.csv" output_dir="./new_results"
+# With Virtual environment
+uv run python testsFS_wfwd_FIXED_FEATURES_refactored.py input_path="/new/path/data.csv" output_dir="./new_results"
+
+# With Singularity Container
+singularity exec --nv featsel_image.sif python3 -u testsFS_wfwd_FIXED_FEATURES_refactored.py input_path="/new/path/data.csv" output_dir="./new_results"
 ```
+---
+
+## 3. Preprocessing input data
+
+### 3.1 Preprocessing
+
+Once downloaded and saved monthly-averaged, the ERA5 and NOAA input data must be preprocessed and saved in the project `preprocessed_data` folder. To do so:
+
+1. Set the correct paths in the configuration file `src/HGRF-HeatWaves/conf/config.yml`. 
+2. Run the script `launch_preprocessing_pipeline.sh`. 
+
+After the execution of the preprocessing pipeline, the `preprocessed_data` folder will be created and present the following structure:
+
+```bash
+preprocessed_data/
+|-- BSC
+|   |-- benchmark
+|   |-- localpred
+|   |-- remotepred
+|   `-- target
+`-- CO2
+```
+
+### 3.2 Input table creation
+
+With all the preprocessed files generated and stored into the `preprocessed_data` directory, execute the `make_the_table_n90_HWP.py` script in the `src/` project folder. This python script will generate two csv tables:
+
+
+1. **`the_table2022_hwprop.csv`** - Conntaining the calculated Heatwave Propensity (the seasonal sum of heatwave magnitudes) based on the Russo et al. (2014) index.
+
+2. **`the_table2022_dabv90.csv`** - Containing the calculated Tx90n index, that represents the number of days whose Tmax is above the smoothed 90th percentile.
+
+Those two tables are the inputs required by the models, once correctly generated the Feature Selection pipeline combining Genetic Algorithim and Random Forest, can be executed.
+
 
 ---
 
-## 3. Feature Selection, Prediction & SHAP computing
+## 4. Feature Selection, Prediction & SHAP computing
 
 The workflow for this project follows a pipeline designed to replicate the data-driven methodology from the associated paper. The process is divided into three distinct stages:
 
