@@ -232,12 +232,6 @@ crai-evaluate -f <PROJECT_ROOT_PATH>/arguments/evaluation_arguments_TN10p.txt
 singularity exec --nv <CONTAINER_NAME>.sif crai-evaluate -f <PROJECT_ROOT_PATH>/arguments/evaluation_arguments_TN10p.txt
 ```
 
-
-```python
-from climatereconstructionai import evaluate
-evaluate()
-```
-
 >**Note:** The evaluation arguments differ from the training arguments in some aspects, so it is a good practice to have one file per each pipeline. For more possible configuration flags check the *Configuration guide* section.
 
 ---
@@ -256,8 +250,106 @@ The evaluation process produces an infilled climate dataset. More concretely, ea
 
 ### 4.1 Statistical calculations
 
+The evaluation pipeline relies on two main statistical calculations Root Mean Squared Error (RMSE) between the predicted value and the ground trouth, and the Spearman Rank-Order Correlation Coefficient (SROCC). The code calculation is done by the following functions:
 
-### 4.2 Ploting results
+#### 4.1.1 RMSE
+
+
+```python
+def RMSE_calculation(ds_output, ds_truth, ds_mask, land):
+    mask = (ds_mask == 0)
+    mask_eval = mask & land            # land broadcasts over time
+
+    RMSE = np.sqrt(np.mean((ds_output[mask_eval] - ds_truth[mask_eval])**2))
+
+    return RMSE
+```
+
+Where:
+
+**`ds_output`:** Is the model `<output_name>_output.nc` listed in the *4. Evaluation outputs*.
+
+**`ds_truth`:** Is the `<output_name>_gt.nc` listed in the *4. Evaluation outputs*.
+
+**`ds_mask`:** Is the `<output_name>_mask.nc` listed in the *4. Evaluation outputs*.
+
+**`land`:** Is the refference grid file for land and sea distinguishing, hence no sea cell is being evaluated.
+
+
+#### 4.1.2 SROCC
+
+```python
+def SROCC_calculation(ds_output, ds_truth, ds_mask, land):
+    mask = (ds_mask == 0)
+    mask_eval = mask & land            # land broadcasts over time
+    
+    # Per-month
+    monthly_rhos = [stats.spearmanr(ds_output[t][mask_eval[t]], ds_truth[t][mask_eval[t]]).statistic
+                    for t in range(ds_truth.shape[0]) if mask_eval[t].sum() > 2]
+    
+    # Pooled method for SROCC --> single Spearman over all reconstructed values pooled across space and time
+    pooled_rhos = stats.spearmanr(ds_output[mask_eval], ds_truth[mask_eval]).statistic
+
+    return monthly_rhos, pooled_rhos
+```
+
+Where:
+
+**`ds_output`:** Is the model `<output_name>_output.nc` listed in the *4. Evaluation outputs*.
+
+**`ds_truth`:** Is the `<output_name>_gt.nc` listed in the *4. Evaluation outputs*.
+
+**`ds_mask`:** Is the `<output_name>_mask.nc` listed in the *4. Evaluation outputs*.
+
+**`land`:** Is the refference grid file for land and sea distinguishing, hence no sea cell is being evaluated.
+
+
+### 4.2 Ploting and results
+
+The paper represents its results through 2 tables and 7 figures, which represents the following:
+
+- **Table 2:** Evaluation of the reconstruction methods using the test dataset (CMIP6 data)
+- **Table 3:** Evaluation of the reconstruction methods using the ERA5 dataset
+- **Figure 1:** Comparison of the temporal and spatial rootmean square error (RMSE) between CRAI and Kriging for the reconstruction of ERA5.
+- **Figure 2:** Comparison of the regional means of TX90p and TN10p.  
+- **Figure 3:** TX90p hot extreme event fromNovember 1947.
+- **Figure 4:** Linear trends (in days/10 years) of TX90p for the period 1901–2018.
+- **Figure 5:** Linear trends (in days/10 years) of TN10p for the period 1901–2018.
+- **Figure 6:** TX90p for a reported heatwave event (September 1911).
+- **Figure 7:** TN10p for a reported coldwave event (February 1929).
+
+#### 4.2.1 Plots
+
+To generate all the plots it's required to reference the following in the configuration file plots section:
+
+- `tx90p_era5_gt_dir`: ERA5 model grand truth output *TX90p_20_eval_era5_gt.nc* generated after the model evaluation with ERA5 input for TX90p index
+- `tn10p_era5_gt_dir`: ERA5 model grand truth output *TN10p_20_eval_era5_gt.nc* generated after the model evaluation with ERA5 input for TN10p index 
+- `tx90p_cam_dir`: Paper's Zenodo HadEX-CAM refference for TX90p `original_TX90p_mon-eu-32x32_hadexcam_infilled_all_1901-2018.nc`
+- `tn10p_cam_dir`: Paper's Zenodo HadEX-CAM refference for TX90p `original_TN10p_mon-eu-32x32_hadexcam_infilled_all_1901-2018.nc`
+- `tx90p_hadex3_dir`: HadEX3 original data obtained from the [CEDA archive](https://data.ceda.ac.uk/badc/ukmo-hadobs/data/derived/MOHC/HadOBS/HadEX3/v3-0-4/)  *HadEX3-0-4_tn10p_mon_1981-2010.nc* regrided to 32x32 with CDO 	 	
+- `tn10p_hadex3_dir`: HadEX3 original data obtained from the [CEDA archive](https://data.ceda.ac.uk/badc/ukmo-hadobs/data/derived/MOHC/HadOBS/HadEX3/v3-0-4/)  *HadEX3-0-4_tx90p_mon_1981-2010.nc* regrided to 32x32 with CDO
+- `tx90p_crai_dir`: HadEX_CAM model infilled output *TX90p_20_eval_HadEX_infilled.nc* generated after the model evaluation with HadEX-CAM input for TX90p index 
+- `tn10p_crai_dir`: HadEX-CAM model infilled output *TN10p_20_eval_HadEX_infilled.nc* generated after the model evaluation with HadEX-CAM input for TN10p index
+
+```yaml
+
+plots:
+  tx90p_era5_gt_dir:
+  tn10p_era5_gt_dir:
+  tx90p_cam_dir:
+  tn10p_cam_dir:
+  tx90p_hadex3_dir:
+  tn10p_hadex3_dir:
+  tx90p_crai_dir:
+  tn10p_crai_dir:
+
+```
+>**Note:** Set the correct configuration paths for your local system.
+
+Once the configuration paths are set, execute the `Figures_reproduction.py` to plot all the figures with the same formating as the paper.
+
+
+#### 4.2.2 Tables
 
 
 
