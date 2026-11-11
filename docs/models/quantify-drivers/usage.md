@@ -50,7 +50,99 @@ source .venv/bin/activate
 
 ### 1.3 Container
 
-{/* TODO: add the container .def file, build command and execution command. */}
+Using the provided qaldera.def file. 
+
+```bash
+
+Bootstrap: docker
+From: mambaorg/micromamba:1.5.10
+
+%labels
+    Description QALDERA (QuantifyDriversHW) - training, SHAP and plotting environment
+    Version 1.0
+    Python 3.10
+
+%help
+    Environment for the QALDERA reproduction (github.com/agarcimes8/QuantifyDriversHW).
+    The project code is NOT inside the image: run the image from the cloned repository root.
+
+    Pipeline (GPU):
+        singularity exec --nv --env PYTHONPATH=$PWD/src qaldera_env.sif \
+            python src/quantifydrivers/train_and_shap/training_evaluation_SHAP_pipeline.py site=cordoba
+
+    Notebooks (JupyterLab):
+        singularity run --nv --env PYTHONPATH=$PWD/src qaldera_env.sif
+
+    Shell:
+        singularity shell --nv qaldera_env.sif
+
+%post
+    export MAMBA_ROOT_PREFIX=/opt/conda
+
+    # Scientific / geo stack from conda-forge.
+    # xesmf (ESMF) and cartopy are only reliably installable through conda.
+    micromamba create -y -n qaldera -c conda-forge \
+        python=3.10 \
+        pip \
+        "numpy<2" \
+        pandas \
+        scipy \
+        xarray \
+        dask \
+        netcdf4 \
+        zarr \
+        matplotlib \
+        seaborn \
+        cartopy \
+        xesmf \
+        xclim \
+        scikit-learn \
+        shap \
+        optuna \
+        hydra-core \
+        omegaconf \
+        "pydantic<2" \
+        pyyaml \
+        tqdm \
+        requests \
+        pillow \
+        imageio \
+        pytest \
+        jupyterlab \
+        ipykernel
+
+    # PyTorch with bundled CUDA 12.1 runtime (only the host NVIDIA driver is needed, via --nv)
+    micromamba run -n qaldera pip install --no-cache-dir \
+        torch==2.4.1 torchvision==0.19.1 \
+        --index-url https://download.pytorch.org/whl/cu121
+
+    # Clean up to reduce image size
+    micromamba clean -a -y
+
+%environment
+    export MAMBA_ROOT_PREFIX=/opt/conda
+    export PATH=/opt/conda/envs/qaldera/bin:$PATH
+    export PROJ_DATA=/opt/conda/envs/qaldera/share/proj
+
+%runscript
+    exec jupyter lab --no-browser --ip=0.0.0.0 "$@"
+
+%test
+    python -c "import torch, torchvision, shap, hydra, xarray, zarr, cartopy, sklearn, optuna, pydantic; print('torch', torch.__version__, '| CUDA available:', torch.cuda.is_available())"
+
+
+```
+
+Execute the singularity or apptainer command bellow to build the container. 
+
+
+```bash
+# Singularity build
+singularity build qaldera_env.sif qaldera_env.def
+
+# Apptainer build
+apptainer build qaldera_env.sif qaldera_env.def
+```
 
 ## 2. Configuration
 
