@@ -1,36 +1,51 @@
 ---
-title: How to use
+title: How to Use
+sidebar_label: How to Use
+sidebar_position: 3
 ---
 
-## 1. Installation
+## 1. Environment Setup
 
-### 1.1 Container
+### 1.1 Get the Code
 
-To run the notebooks, we provide a container configuration file `.def` to be used to build the container itself. The first time you use it, you'll need to mount it and bind it to a local folder.
+Clone the project repository and navigate to the directory:
+
+```bash
+git clone https://github.com/jcarvoli/RMM-VAE_Euro_summer.git
+cd RMM-VAE_Euro_summer
+```
+
+### 1.2 Python Environment
+
+The Python environment (`rmm_env2`) is installed inside the container described below.
+
+### 1.3 Container
+
+To run the notebooks, we provide a container configuration file (`.def`) to build the container. The first time you use it, you'll need to build it and then bind it to a local folder.
 
 1. Navigate to the folder containing the `.def` file (for example, your Downloads folder):
 
 ```bash
-   cd ~/Downloads
+cd ~/Downloads
 ```
 
 2. Build the container using the `.def` file:
 
 ```bash
-   singularity build rmm_env2.sif rmm_env2.def
+singularity build rmm_env2.sif rmm_env2.def
 ```
 
+:::note
+Adjust the paths above to match where you've saved the project and the image on your own machine.
+:::
 
-
-> **Note:** adjust the paths above (`<PROJECT_ROOT_PATH>` and `rmm_env2.sif`) to match where you've saved the project and the image on your own machine.
-
-> **Note**: move the `.sif` file to your project root directory once the building is done for a simple execution.
-
----
+:::note
+Once the build is done, move the `.sif` file to your project root directory for a simpler execution.
+:::
 
 ## 2. Configuration
 
-### Configuring paths
+### 2.1 Configuration Files
 
 Paths and constants used throughout the notebooks are set in a single `config.yaml` file. Before running anything, update this file to match your local folder structure.
 
@@ -47,7 +62,15 @@ constants:
   extended_summer_months: [6, 7, 8]
 ```
 
-**Field reference:**
+:::note
+Make sure the paths in `config.yaml` point to the location where you saved the folders on your machine before running the notebooks. The `config.yaml` file is in the source directory of the project.
+:::
+
+:::note
+Feel free to set the paths as you wish, but we advise keeping everything inside the project root directory to make the reproduction more intuitive.
+:::
+
+### 2.2 Parameter Reference
 
 | Field | Description |
 |---|---|
@@ -58,29 +81,39 @@ constants:
 | `g0` | Gravitational constant (m/s²) |
 | `extended_summer_months` | Months considered as "extended summer" (June, July, August) |
 
-> **Note:** make sure the paths in `config.yaml` point to the location in which you saved the folders on your machine before running the notebook. The `config.yml` file is in the source directory of the project.
+## 3. Data Preparation
 
-> **Note**: feel free to set the paths as you wish, but we advise to follow the centered on root directory strategy to make the reproduction more intuitive.
+Download and preprocess the data as described in [Data](./data.md), and place it in the folder set as `data_path` in `config.yaml`.
 
-## 3. Model training
+## 4. Running the Model
 
->**Note:** Pending info from author
+### 4.2 Training
 
-## 4. Running figures creation notebooks
+:::note
+Pending information from the author.
+:::
 
-### 4.1 Running inside Jupyter
+## 5. Outputs
 
-Run the container, binding your local project folder to your project root directory inside the image:
+The figure notebooks save the figures in your project directory (`figs_path`). When run through the bash script in [Figures and Tables](#6-figures-and-tables), they also generate a new Jupyter notebook with all the cell outputs, so it is possible to check any desired cell output.
+
+## 6. Figures and Tables
+
+### 6.1 Figures
+
+#### Running inside Jupyter
+
+Run the container, binding your local project folder to the `/notebooks` folder inside the image:
 
 ```bash
-   singularity run --bind <PROJECT_ROOT_PATH>/rmm_env2.sif
+singularity run --bind <PROJECT_ROOT_PATH>:/notebooks rmm_env2.sif
 ```
 
-Once the container starts, open the link it prints in your terminal to access the notebook interface. Using this method you'll be able to execute the notebook cell by cell and make changes as you desire.
+Once the container starts, open the link it prints in your terminal to access the notebook interface. With this method, you'll be able to execute the notebooks cell by cell and make changes as you wish.
 
-### 4.2 Bash scripts
+#### Bash scripts
 
-For a HPC running it is possible to run it through a single batch script all the paper steps. To do so, build a bash script with the following commands, they will execute all the figure notebooks in sequence and generate all the figures and data used in the paper analysis. The commands will generate and save the figures in your project directory, and also generates a new jupyter notebook with all cells outputs to so its possible to verify any desired cell output.
+On an HPC system, all the paper steps can be run through a single batch script. To do so, build a bash script with the following commands. They will execute all the figure notebooks in sequence and generate all the figures and data used in the paper analysis.
 
 ```bash
 
@@ -102,5 +135,10 @@ singularity exec --nv rmm_env2.sif jupyter nbconvert --to notebook --execute Fig
 
 ```
 
-> **Note**: Remember to adjust all the paths into your system folder particularities.
+:::note
+Remember to adjust all the paths to your own system.
+:::
 
+### 6.2 Tables
+
+Table 1 of the paper is generated by the notebook `Figure5_a_b_Table1_ERL_refactored.ipynb`, run in the previous step.

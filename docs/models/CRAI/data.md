@@ -1,92 +1,94 @@
 ---
-title: Data 
+title: Data
 sidebar_label: Data
+sidebar_position: 2
 ---
-There are multiple datsets used for the different stages of development of this project. In the following table we can see an Overview of in which stage was each dataset used:
+
+## 1. Datasets
+
+### 1.1 Data Sources
+Multiple datasets are used for the different stages of development of this project. The following table gives an overview of the stage in which each dataset was used:
 
 <figure>
 ![CRAI-dataset](/img/crai/CRAI-datasets.png)
-<figcaption>**Overview of the number of samples, temporal coverage and utilization of the datasets.** *The temporal coverage reported here corresponds to the time period used in the study. Ballot symbols indicates the usage of each dataset for three specific tasks: training of the AI model,
-evaluation of the AI model, analysis of the dataset.*</figcaption>
+<figcaption>**Overview of the number of samples, temporal coverage and utilization of the datasets.** *The temporal coverage reported here corresponds to the time period used in the study. Ballot symbols indicate the usage of each dataset for three specific tasks: training of the AI model, evaluation of the AI model, and analysis of the dataset.*</figcaption>
 </figure>
 
-The HadEX-CAM datasets used for the evaluation and analysis are available in Zenodo: [https://zenodo.org/records/13891336](https://zenodo.org/records/13891336).
+The HadEX-CAM datasets used for the evaluation and analysis are available on Zenodo: [https://zenodo.org/records/13891336](https://zenodo.org/records/13891336).
 
+Notably, the CMIP6 dataset is used in all the model stages. The exact CMIP6 ensemble members used are provided in this table:
 
-Noticeably, the CMIP6 dataset is used on all the models stages. The exact CMIP6 ensemble members used are provided in this table:
 <figure>
 ![CRAI-ensemble](/img/crai/CRAI-CMIP6-ensemble.png)
-<figcaption>**List of CMIP6 models and members used to create the training, validation
-and test datasets.**</figcaption>
+<figcaption>**List of CMIP6 models and members used to create the training, validation and test datasets.**</figcaption>
 </figure>
 
-Next, we provide a guide to obtain the CMIP6 dataset for the training and evaluation using [ESMValTool](https://www.esmvaltool.org/) to download and preprocess them.
+## 2. Environment Setup
 
-## 1. Downloading CMIP6 data
+Next, we provide a guide to obtain the CMIP6 dataset for training and evaluation, using [ESMValTool](https://www.esmvaltool.org/) to download and preprocess it.
 
-### 1.1 Install ESMValTool
- 
+### 2.1 Install ESMValTool
+
 Install ESMValTool and its core engine into a dedicated Conda environment:
- 
+
 ```bash
 conda create -n esmvaltool -c conda-forge esmvaltool
 conda activate esmvaltool
 ```
- 
+
 Full installation instructions are available in the [ESMValTool documentation](https://docs.esmvaltool.org/en/latest/quickstart/installation.html).
- 
-### 1.2 Configure local paths
- 
+
+### 2.2 Configure local paths
+
 Generate the default user configuration file:
- 
+
 ```bash
 esmvaltool config get_config_user
 ```
- 
-This creates `~/.config/esmvaltool/config-user.yml`. Open it and set the following fields. The values shown below reflect the recommended settings for this project, adjust the paths to your own system:
- 
+
+This creates `~/.config/esmvaltool/config-user.yml`. Open it and set the following fields. The values shown below reflect the recommended settings for this project; adjust the paths to your own system:
+
 ```yaml
 # Where plots, NetCDF output, and logs are written
 output_dir: /path/to/output
- 
+
 # Auxiliary data (masks, orography, etc.)
 auxiliary_data_dir: /path/to/aux
- 
+
 # Where ESMValTool looks for (and downloads) raw data
 rootpath:
   CMIP6: /path/to/cmip6_downloads   # ESMValTool will download CMIP6 data here
- 
+
 # Separate directory for ESGF downloads (can be same as rootpath CMIP6)
 download_dir: /path/to/cmip6_downloads
- 
+
 drs:
   CMIP6: default
   native6: default
- 
+
 # Search ESGF only when data is not already available locally
 search_esgf: when_missing
- 
+
 # Keep intermediate preprocessed files for debugging
 remove_preproc_dir: false
- 
+
 # Fail if a requested dataset is missing
 skip_nonexistent: false
- 
+
 # Parallelism
 max_parallel_tasks: 1
- 
+
 log_level: info
 compress_netcdf: false
 save_intermediary_cubes: false
 ```
 
-In the `esmval` module there is an example configuration, `config-user.yml`. This is the configuration that was used for obtaining the datasets. Of course, the paths should be modified. 
+The `esmval` module contains an example configuration, `config-user.yml`. This is the configuration that was used to obtain the datasets. The paths must be modified.
 
- 
-### 1.3 Configure ESGF search nodes
- 
+### 2.3 Configure ESGF search nodes
+
 If the default ESGF node is unavailable or missing data, create `~/.esmvaltool/esgf-pyclient.yml` with additional search nodes:
- 
+
 ```yaml
 search_connection:
   urls:
@@ -94,39 +96,37 @@ search_connection:
     - https://esgf.ceda.ac.uk/esg-search
   distrib: true
 ```
- 
----
- 
-## 2. Understanding the Recipe
- 
-The CRAI recipe (`CRAI_recipe.yml`) is structured in four blocks:
- 
-**`documentation`** — metadata describing the recipe's purpose and authors.
- 
-**`datasets`** — specifies the exact CMIP6 ensemble members to retrieve. 
- 
-**`preprocessors`** — defines the spatial and mathematical operations applied to the raw data before it reaches the diagnostic script.
 
-**`diagnostics` / `scripts`** — maps datasets to preprocessors, then passes the standardised output to the desired script, which in this case is a placeholder with no operations.
- 
----
- 
-## 3. Run the Recipe
- 
+## 3. Data Acquisition
+
+### 3.1 Understanding the Recipe
+
+The CRAI recipe (`CRAI_recipe.yml`) is structured in four blocks:
+
+**`documentation`**: metadata describing the recipe's purpose and authors.
+
+**`datasets`**: specifies the exact CMIP6 ensemble members to retrieve.
+
+**`preprocessors`**: defines the spatial and mathematical operations applied to the raw data before it reaches the diagnostic script.
+
+**`diagnostics` / `scripts`**: maps datasets to preprocessors, then passes the standardised output to the desired script, which in this case is a placeholder with no operations.
+
+### 3.2 Run the Recipe
+
 Once all data is in place and paths are configured:
- 
+
 ```bash
 conda activate esmvaltool
 esmvaltool run CRAI_recipe.yml
 ```
- 
-The output NetCDF store will be written to the `work_dir` subdirectory inside `output_dir`. Update `paths.yml` in the SEASGen experiment configs to point to this path before running the model.
- 
----
- 
-## 4. Preprocessing data into the indices
 
-Once each model data is downloaded it must be organized as it follows:
+The output NetCDF store will be written to the `work_dir` subdirectory inside `output_dir`. The raw CMIP6 files are downloaded into `download_dir`, following the directory structure shown in Section 4.1.
+
+## 4. Preprocessing
+
+### 4.1 Extreme Indices Calculation
+
+Once each model's data is downloaded, it must be organized as follows:
 
 ```bash
 raw_downloads/
@@ -146,38 +146,40 @@ raw_downloads/
         `-- MPI-M
             `-- MPI-ESM1-2-HR
 ```
-Inside of each model the structure must be as:
+
+Inside each model, the structure must be:
 
 ```bash
  `-- historical
      `-- r10i1p1f1 (member code)
-         `-- day (frequence)
+         `-- day (frequency)
              `-- tasmax (variable)
                  `-- ["gr" or "gn"] (grid)
-                     `-- "v..." 
+                     `-- "v..."
 ```
 
-With each model folder correctly in place and filled with the downloaded netCDF (.nc) data containing daily tasmax and tasmin for each one of the years from 1940 to 2022, run the code python + cdo pipeline for preprocessing and index calculation code `build_all_cmip_indices.sh`. 
+With each model folder correctly in place and filled with the downloaded NetCDF (.nc) data containing daily tasmax and tasmin for each of the years from 1940 to 2022, run the Python + CDO pipeline for preprocessing and index calculation, `build_all_cmip_indices.sh`.
 
-> **Note 1**: If you are in a HPC, run the preprocessing code through a slurm script.
+:::note
+If you are on an HPC system, run the preprocessing code through a Slurm script.
+:::
 
-> **Note 2:** If the `build_all_cmip_indices.sh` gets interrupted during its execution, verify in which model member it happened and delete the incomplete file. The code has a file verification that identifies already created output files before runing the pipeline only for the missing ones, if a file creation is interrupted this incomplete file will be counted as an existing one and will break the training pipeline execution afterwards.
+:::warning
+If `build_all_cmip_indices.sh` is interrupted during its execution, check which model member it stopped at and delete the incomplete file. The code checks which output files already exist and runs the pipeline only for the missing ones. If a file creation is interrupted, the incomplete file will be counted as an existing one and will break the training pipeline afterwards.
+:::
 
-The preprocessing pipeline will produce 4 netCDF file (.nc) for each model member one per index (TN10p, TN90p, TX10p and TX90p), following the naming pattern `{index}_{model}_{member}_{starting_year}-{ending_year}.nc`. Those files are the ones used in the training and validation pipeline of the model.
+### 4.2 Masks
 
+Mask files were created to simulate the missing-value patterns of the original HadEX files over the other datasets used for training and evaluation. To reproduce the paper correctly, these masks must be built from the original HadEX data supplied by the authors in the Zenodo repository.
 
-## 5. Masks
+#### 4.2.1 Original data missing-value masks
 
-Masks files were created to simulate the missing values paterns from the original HadEX files over the other datasets used for training and evaluation. For the correct reproduction of the paper its required to build this masks from the original HadEX data supplied by the author in the Zenodo repository.
+This procedure must be executed for each of the original data files `original_<IDX>_mon-eu-32x32_hadexcam_infilled_all_1901-2018.nc` available on Zenodo (one for each IDX). To create the mask files, follow this sequence of CDO commands:
 
-### 5.1 Original data missing-value masks:
-
-This procedure must be executed for each one of the original data files `original_<IDX>_mon-eu-32x32_hadexcam_infilled_all_1901-2018.nc` present in Zenodo (one for each IDX). To create the masks files you can follow the sequence of CDO commands:
-
-1. Divide the file by itself to obtain a pattern of 1 and NaN values: `cdo` `div` `original_<IDX>_...nc` `original_<IDX>_...nc` `div_<IDX>.nc`
-2. Turn the missing values into 0: `cdo` `setmisstoc`,`0` `div_<IDX>.nc` `mask_<IDX>.nc`
+1. Divide the file by itself to obtain a pattern of 1 and NaN values: `cdo div original_<IDX>_...nc original_<IDX>_...nc div_<IDX>.nc`
+2. Turn the missing values into 0: `cdo setmisstoc,0 div_<IDX>.nc mask_<IDX>.nc`
 3. Delete the intermediate file: `rm div_<IDX>.nc`
-4. Verify the mask information usinf CDO info command. Expect Miss=0, min 0 and max 1 at every one of the 1416 timesteps (1901–2018): `cdo info mask_<IDX>.nc`
+4. Verify the mask information using the CDO info command. Expect Miss=0, min 0 and max 1 at every one of the 1416 timesteps (1901–2018): `cdo info mask_<IDX>.nc`
 
 ```bash
 #!/bin/bash
@@ -224,25 +226,24 @@ done
 echo 'Mask creations finished'
 ```
 
-### 5.2  ERA5-evaluation masks
+#### 4.2.2 ERA5 evaluation masks
 
-For ERA5 paper evaluation the time interval is shorter, going from 1940 to 2018 (948 steps) so the required procedure is to crop the already built masks from the original files (STEP 6.1) to the required time window.
+For the ERA5 evaluation in the paper, the time interval is shorter, going from 1940 to 2018 (948 steps), so the masks already built from the original files (Section 4.2.1) must be cropped to the required time window.
 
 1. Start from the original masks `mask_<IDX>.nc` (1416 steps).
-2. Crop it to the ERA5 window to obtain a mask with the same length and calendar months: `cdo seldate,1940-01-01,2018-12-31`
-3. Verify the ERA5 mask file, it must have 948 steps starting from 1940-01 to 2018-12: cdo sinfon `ERA5_mask_<IDX>.nc`
+2. Crop them to the ERA5 window to obtain a mask with the same length and calendar months: `cdo seldate,1940-01-01,2018-12-31`
+3. Verify the ERA5 mask file. It must have 948 steps, from 1940-01 to 2018-12: `cdo sinfon ERA5_mask_<IDX>.nc`
 
+#### 4.2.3 Steady masks
 
-### 5.3 Steady-masks
+This is an auxiliary mask that must be passed with `--steady-masks` during the evaluation procedure. It flags the sea grid cells as NaN and excludes them from the evaluation map plots and calculations, following the same patterns as the authors. For these masks, the reference files are the original CRAI outputs supplied by the authors in the Zenodo repository, and the pipeline is executed in Python instead of CDO.
 
-This is an auxiliary mask that must be flagged with `--steady-maks` during the evaluation procedure, it will flag the sea grids as NaN and disconsider them in the evaluation map plots and calculations, following the same patterns as the author. For this masks the refference files used are the original crai outputs supplied by the author inside the Zenodo repository, and the pipeline is executed on Python instead of CDO.
-
-1. For each file `crai_<IDX>_mon-eu-32x32_hadexcam_infilled_all-avg_1901-2018.nc` 
-2. Crate a land indentificator where NaN values as 0 and all others as 1, for a single timestep `time = 0`: `~np.isnan(bs_mask[idx].isel(time=0).values)`
-3. Create a sea identification to map all the sea: `sea = ~land.astype("float32")`
-4. Check if land and sea respect the proportion of the map you are using, for the paper land = 763 and sea = 261.
-5. Check if the training data coordinates latitude and longitude match the mask ones with minimum error.
-6. Create the steady mask using the sea values and the coordinate values from the traning dataset:
+1. For each file `crai_<IDX>_mon-eu-32x32_hadexcam_infilled_all-avg_1901-2018.nc`:
+2. Create a land identifier, with NaN values as 0 and all others as 1, for a single timestep `time = 0`: `~np.isnan(bs_mask[idx].isel(time=0).values)`
+3. Create a sea identifier to map all the sea: `sea = (~land).astype("float32")`
+4. Check that land and sea match the proportions of the map you are using. For the paper, land = 763 and sea = 261.
+5. Check that the latitude and longitude coordinates of the training data match the mask ones with minimum error.
+6. Create the steady mask using the sea values and the coordinate values from the training dataset:
 
 ```python
     steady = xr.Dataset(
@@ -252,7 +253,8 @@ This is an auxiliary mask that must be flagged with `--steady-maks` during the e
                 "longitude": train.longitude.values},
     )
 ```
-7. Set the training attributes metadata for steady coordinates:  
+
+7. Copy the training attribute metadata to the steady coordinates:
 
 ```python
 steady.latitude.attrs = train.latitude.attrs.copy()
@@ -260,10 +262,9 @@ steady.longitude.attrs = train.longitude.attrs.copy()
 steady.time.attrs = train.time.attrs.copy()
 ```
 
-8. Save the mask
+8. Save the mask.
 
-
-The full pipeline can be writen as it follows:
+The full pipeline can be written as follows:
 
 ```python
 
@@ -346,4 +347,6 @@ for idx in index:
 
 ```
 
+## 5. Final Data Structure
 
+The preprocessing pipeline produces 4 NetCDF (.nc) files for each model member, one per index (TN10p, TN90p, TX10p and TX90p), following the naming pattern `{index}_{model}_{member}_{starting_year}-{ending_year}.nc`. These files are the ones used in the training and validation pipeline of the model.

@@ -1,36 +1,40 @@
 ---
-
 title: Data
-
+sidebar_label: Data
+sidebar_position: 2
 ---
 
 ## 1. Datasets
 
-This project works with 4 different data sources: 
-- [ERA5](https://doi.org/10.24381/cds.50314f4c) (Hersbach et al. 2020): For Oceanic data - model input
-- [ERA5-Land](https://doi.org/10.24381/cds.e2161bac) (Muñoz-Sabater et al. 2021): For Land Surface data - model input
-- [SEAS5](https://doi.org/10.24381/cds.7e37c951) (Johnson et al. 2019): Used as benchmark comparison for the model predictions
-- [NOAA](https://gml.noaa.gov/ccgg/trends/data.html): CO2 concentration data - model input (to be checked)
+### 1.1 Data Sources
 
-The lsit of candidate drivers chosen by the author in each of the input datasets were:
+This project works with 4 different data sources:
+- [ERA5](https://doi.org/10.24381/cds.50314f4c) (Hersbach et al. 2020): oceanic data, model input.
+- [ERA5-Land](https://doi.org/10.24381/cds.e2161bac) (Muñoz-Sabater et al. 2021): land surface data, model input.
+- [SEAS5](https://doi.org/10.24381/cds.7e37c951) (Johnson et al. 2019): used as a benchmark for comparison with the model predictions.
+- [NOAA](https://gml.noaa.gov/ccgg/trends/data.html): CO2 concentration data, model input.
 
-#### Table 1. List of candidate drivers
+### 1.2 Variables
+
+The candidate drivers chosen by the authors from each of the input datasets were:
+
+**Table 1. List of candidate drivers**
 
 | Predictor | Acronym | Component | Source |
 |---|---|---|---|
 | CO2 concentration | CO2 | Global | NOAA |
-| Surface soil moisture (0–7 cm) | swvl1 | Land surface | ERA5 Land |
-| Soil moisture layer 2 (7–28 cm) | swvl2 | Land surface | ERA5 Land |
-| Soil moisture layer 3 (28–100 cm) | swvl3 | Land surface | ERA5 Land |
-| Surface soil temperature (0–7 cm) | stl1 | Land surface | ERA5 Land |
-| Soil temperature layer 2 (7–28 cm) | stl2 | Land surface | ERA5 Land |
-| Soil temperature layer 3 (28–100 cm) | stl3 | Land surface | ERA5 Land |
-| Surface latent heat flux | slhf | Land surface | ERA5 Land |
-| Surface sensible heat flux | sshf | Land surface | ERA5 Land |
-| Surface solar radiation | ssr | Land surface | ERA5 Land |
-| Snow water equivalent | sd | Land surface | ERA5 Land |
-| 15-day trend of slhf | mlhf | Land surface | ERA5 Land |
-| 15-day trend of sshf | mshf | Land surface | ERA5 Land |
+| Surface soil moisture (0–7 cm) | swvl1 | Land surface | ERA5-Land |
+| Soil moisture layer 2 (7–28 cm) | swvl2 | Land surface | ERA5-Land |
+| Soil moisture layer 3 (28–100 cm) | swvl3 | Land surface | ERA5-Land |
+| Surface soil temperature (0–7 cm) | stl1 | Land surface | ERA5-Land |
+| Soil temperature layer 2 (7–28 cm) | stl2 | Land surface | ERA5-Land |
+| Soil temperature layer 3 (28–100 cm) | stl3 | Land surface | ERA5-Land |
+| Surface latent heat flux | slhf | Land surface | ERA5-Land |
+| Surface sensible heat flux | sshf | Land surface | ERA5-Land |
+| Surface solar radiation | ssr | Land surface | ERA5-Land |
+| Snow water equivalent | sd | Land surface | ERA5-Land |
+| 15-day trend of slhf | mlhf | Land surface | ERA5-Land |
+| 15-day trend of sshf | mshf | Land surface | ERA5-Land |
 | Eastern Equatorial Pacific SST | eepo | Ocean | ERA5 |
 | Central Equatorial Pacific SST | cepo | Ocean | ERA5 |
 | Western Equatorial Pacific SST | wepo | Ocean | ERA5 |
@@ -52,35 +56,37 @@ The lsit of candidate drivers chosen by the author in each of the input datasets
 | Canadian ice shelf concentration | cans | Sea Ice | ERA5 |
 | Barents and Kara seas ice concentration | baka | Sea Ice | ERA5 |
 
+## 3. Data Acquisition
 
->**Note: ERA5, ERA5-LAnd and SEAS5 data were downloaded from the C3S Climate Data Store after registration and acceptance of the licensing terms, and postprocess from hour to monthly averaged values before being used in the preprocessing pipelines presented bellow.**
+:::note
+ERA5, ERA5-Land and SEAS5 data were downloaded from the C3S Climate Data Store after registration and acceptance of the licensing terms, and post-processed from hourly to monthly averaged values before being used in the preprocessing pipelines presented below.
+:::
 
-## 2. Data preprocessing
+## 4. Preprocessing
 
-### 2.1 ERA5 data
+### 4.1 ERA5, ERA5-Land and SEAS5 data
 
-The data preprocessing for ERA5, ERA5-Land and SEAS5 is done through the usage of Climate Data Operators (CDO) and netCDF Operators (NCO) in bash scripts stored at the *preprocessing folder*. The preprocessing is done globaly for ERA5 and regionaly for ERA5-Land and SEAS5.
+The data preprocessing for ERA5, ERA5-Land and SEAS5 is done using Climate Data Operators (CDO) and netCDF Operators (NCO) in bash scripts stored in the `preprocessing` folder. The preprocessing is done globally for ERA5 and regionally for ERA5-Land and SEAS5.
 
-| Filename                          | Description                                                        |
-|------------------------------------|---------------------------------------------------------------------|
-| era5_sic_global.sh                | Builds sea ice concentration climatology and anomaly predictors for 4 Arctic regions |
-| era5_sst_global.sh                | Builds SST climatology and anomaly predictors for 16 ocean regions |
-| era5land_slhf_euregions.sh        | Builds surface latent heat flux (SLHF) climatology/anomaly predictors for EU regions |
-| era5land_sshf_euregions.sh        | Builds surface sensible heat flux (SSHF) climatology/anomaly predictors for EU regions |
-| era5land_ssr_euregions.sh         | Builds surface solar radiation (SSR) climatology/anomaly predictors for EU regions |
-| era5land_stl1_euregions.sh        | Builds soil temperature layer 1 (STL1) climatology/anomaly predictors for EU regions |
-| era5land_stl2_euregions.sh        | Builds soil temperature layer 2 (STL2) climatology/anomaly predictors for EU regions |
-| era5land_stl3_euregions.sh        | Builds soil temperature layer 3 (STL3) climatology/anomaly predictors for EU regions |
-| era5land_swe_euregions.sh         | Builds snow water equivalent (SWE) climatology/anomaly predictors for EU regions |
-| era5land_swvl1_euregions.sh       | Builds soil water volume layer 1 (SWVL1) climatology/anomaly predictors for EU regions |
-| era5land_swvl2_euregions.sh       | Builds soil water volume layer 2 (SWVL2) climatology/anomaly predictors for EU regions |
-| era5land_swvl3_euregions.sh       | Builds soil water volume layer 3 (SWVL3) climatology/anomaly predictors for EU regions |
-| era5land_tmax_euregions.sh        | Builds max temperature (Tmax) climatology/anomaly predictors for EU regions |
-| fix_locpred_dates.sh              | Resets the time axis (3-month steps) for swvl2/swvl3 local predictor files across EU regions and ensembles |
-| seas5_tmax_euregions.sh           | Builds SEAS5 forecast tasmax climatology/anomaly benchmark data (2003–2022) by season for EU regions |
-|||
+| Filename | Description |
+|---|---|
+| era5_sic_global.sh | Builds sea ice concentration climatology and anomaly predictors for 4 Arctic regions |
+| era5_sst_global.sh | Builds SST climatology and anomaly predictors for 16 ocean regions |
+| era5land_slhf_euregions.sh | Builds surface latent heat flux (SLHF) climatology/anomaly predictors for EU regions |
+| era5land_sshf_euregions.sh | Builds surface sensible heat flux (SSHF) climatology/anomaly predictors for EU regions |
+| era5land_ssr_euregions.sh | Builds surface solar radiation (SSR) climatology/anomaly predictors for EU regions |
+| era5land_stl1_euregions.sh | Builds soil temperature layer 1 (STL1) climatology/anomaly predictors for EU regions |
+| era5land_stl2_euregions.sh | Builds soil temperature layer 2 (STL2) climatology/anomaly predictors for EU regions |
+| era5land_stl3_euregions.sh | Builds soil temperature layer 3 (STL3) climatology/anomaly predictors for EU regions |
+| era5land_swe_euregions.sh | Builds snow water equivalent (SWE) climatology/anomaly predictors for EU regions |
+| era5land_swvl1_euregions.sh | Builds soil water volume layer 1 (SWVL1) climatology/anomaly predictors for EU regions |
+| era5land_swvl2_euregions.sh | Builds soil water volume layer 2 (SWVL2) climatology/anomaly predictors for EU regions |
+| era5land_swvl3_euregions.sh | Builds soil water volume layer 3 (SWVL3) climatology/anomaly predictors for EU regions |
+| era5land_tmax_euregions.sh | Builds max temperature (Tmax) climatology/anomaly predictors for EU regions |
+| fix_locpred_dates.sh | Resets the time axis (3-month steps) for swvl2/swvl3 local predictor files across EU regions and ensembles |
+| seas5_tmax_euregions.sh | Builds SEAS5 forecast tasmax climatology/anomaly benchmark data (2003–2022) by season for EU regions |
 
-Once the data is downloaded and stored the header configuration variables must be adjusted to the correct system names and paths:
+Once the data is downloaded and stored, the header configuration variables must be adjusted to the correct system names and paths:
 
 ```bash
 iniyr=1950
@@ -94,9 +100,11 @@ wrkdir=<WORKING_DIRECTORY>
 pdcdir=<PREDICTORS_FILES_WRITING_DIRECTORY>
 ```
 
->**Note:** The variables `varera` is the ERA5 correct short name in case of adjustments needed from the downloaded files and `var` is the name used in the pipeline. The table bellow correlates both to make it clear to all users.
+:::note
+The variable `varera` is the correct ERA5 short name, in case the downloaded files need adjusting, and `var` is the name used in the pipeline. The table below maps one to the other.
+:::
 
-Once the variables are correctly filled in each one of the preprocessing scripts they can be executed. The preprocessing scripts are located inside the folder preprocessing, as listed bellow:
+Once the variables are correctly filled in in each of the preprocessing scripts, the scripts can be executed. They are located in the `preprocessing` folder, as listed below:
 
 | Name | var | varera | Script |
 |---|---|---|---|
@@ -116,17 +124,25 @@ Once the variables are correctly filled in each one of the preprocessing scripts
 | Sea surface temperature (16 regions: eepo … bars) | tos | — | `era5_sst_global.sh` |
 | Sea ice concentration (cans, alsk, sibs, baka) | sic | — | `era5_sic_global.sh` |
 
-### 2.2 NOAA CO2 data
+:::note
+Table 1 uses the acronyms from the paper, where snow water equivalent is `sd`; the pipeline names it `swe`. The 15-day trend of ssr (`mssr`) is produced by the pipeline but is not among the paper's candidate drivers (Table 1).
+:::
 
-The CO2 data follows a different preprocessing path in relation to the ERA5. This data is obtained in .csv format with starting date on 1958, requiring the following steps before the preprocessing script execution:
+### 4.2 NOAA CO2 data
+
+The CO2 data follows a different preprocessing path from the ERA5 data. It is obtained in .csv format starting in 1958, and requires the following steps before the preprocessing script is executed:
 
 1. Data download.
-2. Data adjustment to seasons trimesters.
-3. Linear regression over 1958 to 1968 to generate 1950 to 1957 years missing data.
-4. Downloaded data season shaped concatenation with infered values to build input dataset for the preprocessing pipeline.
+2. Adjustment of the data to seasonal trimesters.
+3. Linear regression over 1958 to 1968 to generate the missing data for the years 1950 to 1957.
+4. Concatenation of the season-shaped downloaded data with the inferred values, to build the input dataset for the preprocessing pipeline.
 
-Once executed the output dataset will be a `.csv` file containing the columns *"Year", "Season", "Conc"* with Seasons composed by the months initials and Conc by the the average CO2 concentration values from the year 1950 to 2022. This dataset can now be feed to the preprocessing pipeline to generate the *the_table.csv* file that will be inputed for the model.
+Once executed, the output dataset will be a `.csv` file containing the columns *"Year", "Season", "Conc"*, with Season given by the months' initials and Conc by the average CO2 concentration values from 1950 to 2022. This dataset can then be fed to the preprocessing pipeline to generate the *the_table.csv* file that is input to the model.
 
->**Note:** NOAA data is passive to revision and updates so the linear regression values obtained for the 1950 to 1958 period may differ slighly if executed from files downloaded in defferent periods.
+:::note
+NOAA data is subject to revisions and updates, so the linear regression values obtained for the 1950 to 1957 period may differ slightly if executed from files downloaded at different times.
+:::
 
+## 5. Final Data Structure
 
+{/* TODO: describe the predictor files written to pdcdir and the_table.csv (folder tree, naming pattern), and the config entry that points the model to them. */}
